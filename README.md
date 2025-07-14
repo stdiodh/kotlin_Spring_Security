@@ -104,7 +104,8 @@ Swagger는 API 설계를 문서화하고 클라이언트가 테스트할 수 있
 - **실습 도구**  
   POSTMAN → Swagger로 대체 (API 명세 제공의 한계 때문)
 
-[Swagger Screenshot](https://github.com/user-attachments/assets/29a02203-f82d-48b6-b20a-d5283510d320)
+<img width="1822" height="1180" alt="스크린샷 2025-07-14 오후 3 42 22" src="https://github.com/user-attachments/assets/5eec3917-3eb6-44e4-8b00-f9516e68f674" />
+
 
 ---
 
