@@ -22,13 +22,15 @@ class Post(
     var public: Boolean
 
 ){
-//    @OneToMany(fetch = FetchType.LAZY, mappedBy = "post", cascade = [CascadeType.ALL])
-//
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "post", cascade = [CascadeType.ALL])
+    var comments : List<Comment>? = null
+
     fun toResponse() : PostResponseDto = PostResponseDto(
         id = id,
         title = title,
         post = post,
         userId = userId,
-        public = public
+        public = public,
+        comments = comments?.map { it.toResponse() }
     )
 }

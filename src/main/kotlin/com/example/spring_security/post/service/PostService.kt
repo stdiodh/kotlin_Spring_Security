@@ -30,15 +30,6 @@ class PostService (
         return result.toResponse()
     }
 
-    fun getPostByUserId(userId: Long) : List<PostResponseDto> {
-        //1. userId가 memberRepository에 있는지 확인한다.
-        memberRepository.findByIdOrNull(userId) ?: throw NotFoundException()
-        //2. 있다면 ID가 확인이 되고 postRepository에서 memberID에 해당하는 게시글을 가져온다.
-        val result = postRepository.findByuserId(userId)
-
-        return result.map { it.toResponse() }
-    }
-
     //게시판 작성
     fun postPost(postRequestDto : PostRequestDto) : PostResponseDto {
         val result = postRepository.save(postRequestDto.toEntity())

@@ -39,15 +39,9 @@ class SecurityConfig(
             }
 
             // 권한 설정
-            .authorizeHttpRequests {
-                it
-                    // 회원가입 및 로그인은 인증 없이 접근 가능
-                    .requestMatchers("/api/member/join", "/api/member/login").anonymous()
-
-                    // 게시글 API는 MEMBER 권한이 있어야 접근 가능
-                    .requestMatchers("/api/posts").hasAnyRole("MEMBER")
-
-                    // 그 외 모든 요청은 허용
+            .authorizeHttpRequests{
+                it.requestMatchers("/api/member/join", "/api/member/login").anonymous()
+                    .requestMatchers("/api/**").hasRole("MEMBER")
                     .anyRequest().permitAll()
             }
 
