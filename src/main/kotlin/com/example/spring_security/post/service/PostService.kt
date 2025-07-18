@@ -1,12 +1,10 @@
 package com.example.spring_security.post.service
 
 import com.example.spring_security.common.exception.post.PostException
-import com.example.spring_security.member.repository.MemberRepository
 import com.example.spring_security.post.dto.PostRequestDto
 import com.example.spring_security.post.dto.PostResponseDto
 import com.example.spring_security.post.repository.PostRepository
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -16,14 +14,7 @@ import org.springframework.web.server.ResponseStatusException
 class PostService (
     @Autowired
     private val postRepository : PostRepository,
-    private val memberRepository: MemberRepository
 ){
-    //리스트 전체 조회
-    fun getPostList() : List<PostResponseDto> {
-        val result = postRepository.findAll()
-        return result.map { it.toResponse() }
-    }
-
     //게시물 ID 개별 조회
     fun getPostById(id: Long) : PostResponseDto {
         val result = postRepository.findByIdOrNull(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)

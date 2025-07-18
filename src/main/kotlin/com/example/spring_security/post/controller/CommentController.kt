@@ -25,7 +25,7 @@ class CommentController {
 
     @Operation(summary = "댓글 조회", description = "모든 댓글 목록을 조회합니다.")
     @GetMapping
-    private fun getComments() : ResponseEntity<BaseResponse<List<CommentResponseDto>>> {
+    fun getComments() : ResponseEntity<BaseResponse<List<CommentResponseDto>>> {
         val result = commentService.getComments()
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse(data = result))
     }
