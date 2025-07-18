@@ -3,7 +3,7 @@ package com.example.spring_security.member.service
 import com.example.spring_security.common.authority.JwtTokenProvider
 import com.example.spring_security.common.dto.TokenInfo
 import com.example.spring_security.common.enum.Role
-import com.example.spring_security.common.exception.InvalidEmailException
+import com.example.spring_security.common.exception.member.InvalidEmailException
 import com.example.spring_security.member.dto.LoginDto
 import com.example.spring_security.member.dto.MemberRequestDto
 import com.example.spring_security.member.entity.Member

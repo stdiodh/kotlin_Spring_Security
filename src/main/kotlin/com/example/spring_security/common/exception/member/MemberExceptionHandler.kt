@@ -2,7 +2,6 @@ package com.example.spring_security.common.exception.member
 
 import com.example.spring_security.common.dto.BaseResponse
 import com.example.spring_security.common.enum.ResultStatus
-import com.example.spring_security.common.exception.InvalidEmailException
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

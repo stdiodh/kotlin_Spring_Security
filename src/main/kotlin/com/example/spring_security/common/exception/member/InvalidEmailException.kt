@@ -1,4 +1,4 @@
-package com.example.spring_security.common.exception
+package com.example.spring_security.common.exception.member
 
 class InvalidEmailException(
     val fieldName : String = "",
