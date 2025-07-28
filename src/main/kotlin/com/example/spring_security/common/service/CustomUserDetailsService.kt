@@ -1,5 +1,6 @@
 package com.example.spring_security.common.service
 
+import com.example.spring_security.common.dto.CustomUser
 import com.example.spring_security.member.entity.Member
 import com.example.spring_security.member.repository.MemberRepository
 import org.springframework.security.core.authority.SimpleGrantedAuthority
@@ -31,7 +32,8 @@ class CustomUserDetailsService(
      * DB에서 가져온 Member 엔티티를 Spring Security의 UserDetails로 변환
      */
     private fun createUserDetails(member: Member): UserDetails {
-        return User(
+        return CustomUser(
+            member.id!!,
             member.email,  // username
             passwordEncoder.encode(member.password), // password (주의: 이미 인코딩된 값이면 재인코딩하면 안 됨!)
             member.role!!.map { SimpleGrantedAuthority("ROLE_${it.role}") } // 권한 변환
