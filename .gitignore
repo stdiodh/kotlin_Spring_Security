@@ -1,0 +1,18 @@
+# Kotlin build
+/build/
+/out/
+
+# Gradle
+.gradle/
+/build/
+
+# IntelliJ
+.idea/
+/*.iml
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

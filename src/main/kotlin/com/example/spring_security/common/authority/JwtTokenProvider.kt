@@ -1,5 +1,6 @@
 package com.example.spring_security.common.authority
 
+import com.example.spring_security.common.dto.CustomUser
 import com.example.spring_security.common.dto.TokenInfo
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
@@ -17,6 +18,7 @@ import java.util.*
 
 // JWT 만료 시간: 30분 (1000ms * 60초 * 30분)
 const val EXPIRATION_MILLISECONDS : Long = 1000 * 60 * 30L
+const val REFRESH_EXPIRATION_MILLISECONDS : Long = 1000 * 60 * 60 * 24 * 30L
 
 // 스프링 컴포넌트로 등록되는 클래스 (빈으로 등록됨)
 // 빈이란? 스프링 컨테이너에 의해 관리되는 재사용 가능한 소프트웨어 컴포넌트
@@ -34,7 +36,7 @@ class JwtTokenProvider {
      * JWT 토큰 생성 함수
      * 로그인 후 사용자 인증 정보(Authentication)를 바탕으로 토큰을 생성
      */
-    fun createToken(authentication : Authentication) : TokenInfo {
+    fun createAccessToken(authentication : Authentication) : String {
         // 사용자의 권한(roles/authorities)을 하나의 문자열로 결합
         val authorities : String = authentication
             .authorities
@@ -43,18 +45,18 @@ class JwtTokenProvider {
         val now = Date() // 현재 시간
         val accessExpiration = Date(now.time + EXPIRATION_MILLISECONDS) // 만료 시간 = 현재 + 30분
 
+        val userId = (authentication.principal as CustomUser).id
+
         // JWT Access Token 생성
-        val accessToken = Jwts
+        return Jwts
             .builder()
             .subject(authentication.name) // 사용자 식별자 (주로 이메일 또는 username)
-            .claim("auth", authorities)   // 사용자 권한 정보 추가
+            .claim("auth", authorities)   // 사용자 권한 정보 추가.
+            .claim("userId", userId)
             .issuedAt(now)                // 토큰 발급 시간
             .expiration(accessExpiration) // 토큰 만료 시간
             .signWith(key, Jwts.SIG.HS256) // HMAC SHA-256 알고리즘으로 서명
             .compact()                    // 최종적으로 JWT 문자열 생성
-
-        // 토큰 정보 반환 (Bearer 타입 사용)
-        return TokenInfo(grantType = "Bearer", accessToken = accessToken)
     }
 
     /**
@@ -66,6 +68,7 @@ class JwtTokenProvider {
 
         // auth claim이 없으면 예외 발생
         val auth = claims["auth"] ?: throw RuntimeException("유효하지 않은 토큰입니다!")
+        val userId = claims["userId"] ?: throw RuntimeException("유효하지 않은 토큰입니다!")
 
         // 권한 문자열을 ,로 분리하여 GrantedAuthority 리스트로 변환
         val authorities : Collection<GrantedAuthority> = (auth as String)
@@ -74,10 +77,23 @@ class JwtTokenProvider {
 
         // Spring Security UserDetails 생성
         // Claims.SUBJECT 는 subject 값 (username)
-        val principal : UserDetails = User(claims.subject, "", authorities)
+        val principal : UserDetails = CustomUser(userId.toString().toLong(), Claims.SUBJECT, "", authorities)
 
         // 인증 객체 반환
         return UsernamePasswordAuthenticationToken(principal, "", authorities)
+    }
+
+    fun createRefreshToken() : String {
+        val now = Date()
+
+        //refresh 토큰 유효시간
+        val refreshExpiration = Date(now.time + REFRESH_EXPIRATION_MILLISECONDS)
+        return Jwts
+            .builder()
+            .issuedAt(now)
+            .expiration(refreshExpiration)
+            .signWith(key, Jwts.SIG.HS256)
+            .compact()
     }
 
     /**

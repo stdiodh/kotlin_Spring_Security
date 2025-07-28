@@ -1,7 +1,7 @@
 package com.example.spring_security.common.dto
 
-//import org.springframework.security.core.GrantedAuthority
-//import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.userdetails.User
 
 //사용자 정의 클래스
 /**
@@ -12,9 +12,9 @@ package com.example.spring_security.common.dto
  * authority	사용자의 권한 정보 (ROLE_USER, ROLE_ADMIN 등)
  * User(...)	부모 클래스인 User의 생성자를 호출함. 여기서 이메일은 username으로 사용됨
  */
-//class CustomUser (
-//    val id : Long,
-//    email : String,
-//    password : String,
-//    authority : Collection<GrantedAuthority>
-//) : User(email, password, authority)
+class CustomUser (
+    val id : Long,
+    email : String,
+    password : String,
+    authority : Collection<GrantedAuthority>
+) : User(email, password, authority)

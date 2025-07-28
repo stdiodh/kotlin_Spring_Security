@@ -1,15 +1,21 @@
 package com.example.spring_security.member.controller
 
 import com.example.spring_security.common.dto.BaseResponse
+import com.example.spring_security.common.dto.CustomUser
 import com.example.spring_security.common.dto.TokenInfo
 import com.example.spring_security.member.dto.LoginDto
 import com.example.spring_security.member.dto.MemberRequestDto
+import com.example.spring_security.member.dto.MemberResponseDto
 import com.example.spring_security.member.service.MemberService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -43,5 +49,33 @@ class MemberController (
         val tokenInfo = memberService.login(loginDto)
         return ResponseEntity.status(HttpStatus.OK)
             .body(BaseResponse(data = tokenInfo))
+    }
+
+    @Operation(
+        summary = "내 정보 조회",
+        description = "회원 정보를 조회합니다."
+    )
+    @SecurityRequirement(name = "BearerAuth")
+    @GetMapping("/info")
+    private fun searchMyInfo()
+    : ResponseEntity<BaseResponse<MemberResponseDto>> {
+        val memberId = (SecurityContextHolder.getContext().authentication.principal as CustomUser).id
+        val result = memberService.searchMyInfo(memberId)
+        return ResponseEntity.status(HttpStatus.OK)
+            .body(BaseResponse(data = result))
+    }
+
+    @Operation(
+        summary = "로그아웃",
+        description = "로그인한 사용자의 토큰을 반환합니다."
+    )
+    @SecurityRequirement(name = "BearerAuth")
+    @DeleteMapping("/logout")
+    private fun logout() : ResponseEntity<BaseResponse<String>> {
+        val memberId = (SecurityContextHolder.getContext().authentication.principal as CustomUser).id
+        val result = memberService.logout(memberId)
+        return ResponseEntity.status(HttpStatus.OK).body(
+            BaseResponse(data = result)
+        )
     }
 }
