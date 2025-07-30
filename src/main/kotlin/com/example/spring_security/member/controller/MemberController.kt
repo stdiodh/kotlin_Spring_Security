@@ -80,7 +80,7 @@ class MemberController (
         summary = "사용자 비밀번호 재설정 코드전송",
         description = "이메일이 유효하다면 사용자 비밀번호 변경 메일을 보냅니다."
     )
-    @PostMapping("/sendResetCode")
+    @PostMapping("/reset-password-code")
     private fun sendEmailResetCode(@Valid @RequestParam email: String)
             : ResponseEntity<BaseResponse<String>> {
         val result = memberService.sendPasswordResetCode(email)
@@ -93,7 +93,7 @@ class MemberController (
         summary = "사용자 비밀번호 재설정",
         description = "전송한 코드를 체크하고 비밀번호를 변경한다."
     )
-    @PostMapping("/resetPassword")
+    @PostMapping("/reset-password/request")
     private fun resetPassword(@Valid @RequestBody passwordResetRequestDto: PasswordResetRequestDto)
             : ResponseEntity<BaseResponse<String>> {
         val result = memberService.handlePasswordReset(passwordResetRequestDto)

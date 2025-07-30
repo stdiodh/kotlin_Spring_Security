@@ -46,6 +46,7 @@ dependencies {
 
 	//smtp
 	implementation("org.springframework.boot:spring-boot-starter-mail")
+	implementation("org.springframework.boot:spring-boot-starter-thymeleaf:3.5.4")
 }
 
 kotlin {
