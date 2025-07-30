@@ -21,9 +21,12 @@ import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.stereotype.Service
+import org.thymeleaf.context.Context
+import org.thymeleaf.spring6.SpringTemplateEngine
 import java.time.LocalDateTime
 
 @Transactional
@@ -36,7 +39,8 @@ class MemberService(
     private val authenticationManagerBuilder: AuthenticationManagerBuilder,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val javaMailSender : JavaMailSender,
-    private val passwordResetCodeRepository: PasswordResetCodeRepository
+    private val passwordResetCodeRepository: PasswordResetCodeRepository,
+    private val templateEngine : SpringTemplateEngine
 ) {
     //회원가입
     fun signUp(memberRequestDto: MemberRequestDto) : String {
@@ -121,12 +125,20 @@ class MemberService(
         )
         passwordResetCodeRepository.save(passwordResetCode)
 
-        val message = SimpleMailMessage()
-        message.subject = "TEST 서버의 이메일 : $email 에 대한 비밀번호 재설정입니다."
-        message.text = "당신의 비밀번호 재설정 코드는 $code 입니다." +
-                "15분 안에 회신하셔야 비밀번호를 수정할 수 있습니다!"
-        message.setTo(email)
-        javaMailSender.send(message)
+        val context = Context().apply {
+            setVariable("email", email)
+            setVariable("code", code)
+        }
+        val html = templateEngine.process("reset-password-code.html", context)
+
+        val mimeMessage = javaMailSender.createMimeMessage()
+        val helper = MimeMessageHelper(mimeMessage, "utf-8")
+        helper.setTo(email)
+        helper.setSubject("비밀번호 재설정 코드 안내")
+        helper.setText(html, true)
+
+        javaMailSender.send(mimeMessage)
+
         return "메일이 발송되었습니다."
     }
 
