@@ -40,7 +40,8 @@ class SecurityConfig(
 
             // 권한 설정
             .authorizeHttpRequests{
-                it.requestMatchers("/api/member/join", "/api/member/login").anonymous()
+                it.requestMatchers("/api/member/join", "/api/member/login",
+                    "/api/member/sendResetCode", "/api/member/resetPassword").anonymous()
                     .requestMatchers("/api/**").hasRole("MEMBER")
                     .anyRequest().permitAll()
             }
