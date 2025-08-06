@@ -1,47 +1,86 @@
-# 🗂️ 4주차 - 1:N RDB Database
-> 게시판 기능을 구현해보자!
+# 🗂️ 5주차 - RefreshToken, SMTP
+> 로그인 토큰 중 RefreshToken을 생성해보고, 비밀번호를 잊어버렸을 시 메일로 인증번호가 전송되어 비밀번호를 재설정할 수 있는 로직을 만들어보자!
 
-본 문서는 Spring Data JPA를 이용하여 1:N 관계를 가진 게시판과 댓글 기능을 구현합니다.</br>
-데이터베이스는 `MySQL`을 이용합니다.
+본 문서는 Spring Boot를 활용하여 **인증 토큰 관리(Access/Refresh Token)** 와 **이메일 전송 기능(SMTP)** 을 구현하는 방법을 설명합니다.  
+캐시 저장소로는 `Redis`, 이메일 템플릿 처리는 `Thymeleaf`를 사용합니다.
 
 ---
+
 ## 이론 설명
-## ERD란?
 
-<img width="1600" height="1000" src="https://github.com/user-attachments/assets/dc6a52d9-f503-4f20-8125-9fdfd390494c" />
-
-- 개체 관계 다이어그램으로써 데이터베이스 모델링에서 사용되는 시각적 도구
-- **Entity(개체)**, **Attribute(속성)**, **Relationship(관계)** 을 통해 데이터 모델을 설계
-
- 
-## 📦 구성 요소
-
-| 요소         | 설명 |
-|--------------|------|
-| **Entity**   | 테이블에 해당하는 개체. 사각형으로 표현 |
-| **Attribute**| Entity의 속성. Entity에 연결된 타원형 또는 내부 속성으로 표시 |
-| **Primary Key** | 기본 키(PK)는 속성명 앞에 🔑 또는 PK로 표시 |
-| **Foreign Key** | 외래 키(FK)는 속성명 앞에 FK로 표시 |
-| **Relationship** | Entity 간의 관계를 연결선으로 표현, 선 위에 관계명과 Cardinality를 표시 |
-
-
-## ERD 속 표기법
-## 🧾 IE 표기법이란?
-
-IE(Information Engineering) 표기법은 ERD에서 **관계형 데이터베이스 설계 시 가장 널리 쓰이는 표기법** 중 하나입니다.  
-**핵심 특징은 각 요소(Entity, 속성, 관계)를 명확하게 구분하여 설계할 수 있다는 점**입니다.
-
-<img width="800" height="600" alt="image" src="https://github.com/user-attachments/assets/66fa022c-6caf-4511-8762-e330ec634c34" />
-
-## 🔢 Cardinality (관계 수 표현)
-
-| 표기 | 의미 | 설명 |
-|------|------|------|
-| 1:1  | 일대일 | 하나의 Entity가 다른 Entity와 정확히 하나만 관계 |
-| 1:N  | 일대다 | 하나의 Entity가 여러 개의 다른 Entity와 관계 |
-| M:N  | 다대다 | 여러 개의 Entity들이 서로 관계 (관계 테이블 필요) |
+### ✅ Access Token이란?
+- 로그인 후 인증된 사용자임을 증명하는 **짧은 수명의 토큰**
+- 사용자가 서버에 리소스를 요청할 때 **인증 정보로 사용**
+- 민감한 정보를 담고 있어 유효 시간이 짧게 설정되는 것이 일반적
 
 ---
+
+### 🔒 Access Token의 한계
+- **짧은 유효 시간**으로 인해 자주 재로그인이 필요
+- 일정 시간 경과 후 **403 오류 발생**
+- 사용자 경험 저하
+
+---
+
+### 🔁 Refresh Token이란?
+- Access Token의 단점을 보완하기 위해 도입된 **장기 토큰**
+- 사용자가 로그인 상태를 유지할 수 있도록 **Access Token을 갱신하는 용도**
+- Refresh Token은 서버에 안전하게 저장되어야 하며, **로그아웃 시 제거 필요**
+
+---
+
+## 🧰 Redis 도입 이유
+
+| 항목 | 설명 |
+|------|------|
+| RDB (MySQL) | 데이터가 많아질수록 탐색 시간이 증가함 |
+| Redis | 메모리 기반 캐시 시스템, 빠른 조회 가능 |
+| 특징 | NoSQL 구조로 설정이 간단하며, Token 저장에 적합 |
+
+### 🖥 Redis 설치 명령어
+
+#### ▸ MacOS
+```bash
+brew install redis
+brew services start redis
+redis-cli -h localhost -p 6379
+```
+
+#### ▸ Windows
+- [`Redis for Windows`](https://github.com/microsoftarchive/redis/releases) 에서 `.msi` 파일 설치
+- 설치 경로에서 `redis-cli.exe` 실행
+
+---
+
+## 🔓 로그아웃 구현
+
+- 로그아웃 시 Redis에 저장된 **Refresh Token 제거 필수**
+- 제거하지 않으면 발생할 수 있는 문제:
+  1. 공격자가 Redis에서 모든 토큰을 탈취할 수 있음
+  2. 사용자가 많을수록 **리소스 낭비** 심화
+  3. 세션이 **무한 유지**될 수 있음 (분실/탈퇴 시 위험)
+
+---
+
+## 📧 이메일 전송 (SMTP)
+
+### ✅ SMTP란?
+- 메일 전송 프로토콜 (Simple Mail Transfer Protocol)
+- Spring Boot에서 **메일 발송 기능을 구현**할 수 있음
+- 비밀번호 재설정, 인증번호 발송 등에 활용 가능
+
+---
+
+### ✅ Thymeleaf란?
+- **HTML 템플릿 엔진**으로 변수 바인딩 가능
+- 이메일 본문을 동적으로 생성할 수 있도록 도와줌
+
+```html
+<p>안녕하세요 <span th:text="${username}"></span> 님!</p>
+```
+
+---
+
 ## 📌 실습 환경
 
 - **Swagger UI 주소**  
@@ -52,69 +91,78 @@ IE(Information Engineering) 표기법은 ERD에서 **관계형 데이터베이�
 
 <img width="1822" height="1180" alt="스크린샷 2025-07-14 오후 3 42 22" src="https://github.com/user-attachments/assets/5eec3917-3eb6-44e4-8b00-f9516e68f674" />
 
----
-
-### 4주차 실습 ERD
-<img width="2276" height="1012" alt="image" src="https://github.com/user-attachments/assets/c7052d72-5af0-4582-9beb-3dacbf9af2ea" />
-
-### Entity 관계
-```kotlin
-// Post.kt
-@OneToMany(fetch = FetchType.LAZY, mappedBy = "post", cascade = [CascadeType.ALL])
-var comments: List<Comment>? = null
-```
-
-```kotlin
-// Comment.kt
-@ManyToOne(fetch = FetchType.LAZY)
-@JoinColumn(foreignKey = ForeignKey(name = "fk_comment_post_id"))
-val post: Post
-```
-| 로딩 방식   | 설명                         | 예시                                    |
-| ------- | -------------------------- | ------------------------------------- |
-| `EAGER` | 즉시 로딩 – 조회 시 연관 객체도 함께 가져옴 | `SELECT * FROM comment JOIN post ...` |
-| `LAZY`  | 지연 로딩 – 실제 접근 시 로딩         | `SELECT * FROM post` → 이후에 comment 조회 |
-
-<img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/7ba0b008-c922-44a3-bb24-018e4e6bc406" />
-
----
-
-### 1. 게시글 작성 (POST `/api/post/{id}`)
+### 1. 리프레시 토큰 발급 (POST /api/member/login)
 - **요청 방식**: `POST`
-- **요청 Body**: `PostRequestDto`
+- **요청 Body**: `LoginRequestDto`
 ```kotlin
-data class PostRequestDto (
-    var id : Long?,
-    @field:NotBlank(message = "제목을 반드시 입력되어야 합니다!")
-    var title : String,
-    @field:NotBlank(message = "내용은 반드시 입력되어야 합니다!")
-    var post : String,
-    @field:Min(value = 1, message = "유효하지 않은 사용자입니다!")
-    var userId : Long,
-    var public : Boolean,
+data class LoginDto (
+    @field:NotBlank(message = "이메일을 입력하세요.")
+    @field:Email(message = "이메일 형식이 올바르지 않습니다!")
+    @JsonProperty("email")
+    private val _email : String?,
+
+    @field:NotBlank(message = "비밀번호를 입력하세요.")
+    @JsonProperty("password")
+    private val _password : String?
+)
+```
+- **DTO Validation 적용됨**
+<img width="857" height="602" alt="image" src="https://github.com/user-attachments/assets/ae1e15f0-a1da-48ea-af10-e6cab4c6d768" />
+
+로그아웃을 하지 않으면 RefreshToken이 남아 있을 수 있으니 null로 표기 시 redis에 들어가 `flashall` 명령어를 사용할 것
+
+<img width="3424" height="2174" alt="image" src="https://github.com/user-attachments/assets/384df843-068e-4204-a228-e65901315757" />
+
+
+### 2. 비밀번호 재설정 코드 전송 (POST /api/member/reset-password-code)
+- **요청 방식**: `POST`
+- **요청 Param**: `email`
+
+<img width="3424" height="2174" alt="image" src="https://github.com/user-attachments/assets/75b05f3b-50fb-4e34-9dfc-fa6d11568ea8" />
+<img width="3424" height="2174" alt="image" src="https://github.com/user-attachments/assets/344ff534-59fb-434c-a151-945675b3bc14" />
+유효한 이메일에만 전송되니 유의할 것
+
+### 3. 비밀번호 재설정 코드 확인 후 비밀번호 재설정 (POST /api/member/reset-password/request)
+- **요청 방식**: `POST`
+- **요청 Body**: `PasswordResetRequestDto`
+```kotlin
+data class PasswordResetRequestDto(
+    @Order(1)
+    @field:Email(message = "올바르지 않은 이메일 형식입니다.")
+    @field:NotBlank(message = "이메일은 필수 입력 항목입니다.")
+    @JsonProperty("email")
+    private val _email: String,
+
+    @Order(2)
+    @field:NotBlank(message = "인증 코드는 필수 입력 항목입니다.")
+    @JsonProperty("code")
+    private val _code: String,
+
+    @Order(3)
+    @field:NotBlank(message = "비밀번호는 필수 입력 항목입니다.")
+    @field:Pattern(
+        regexp = "^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#\$%^&*()])[a-zA-Z0-9!@#\$%^&*()]{8,20}\$",
+        message = "올바르지 못한 비밀번호 형식입니다!"
+    )
+    @JsonProperty("newPassword")
+    private val _newPassword: String
 )
 ```
 - **DTO Validation 적용됨**
 
-<img width="3424" height="2174" alt="스크린샷 2025-07-21 오후 2 26 15" src="https://github.com/user-attachments/assets/23f9f95c-5613-41ef-872b-74dcc40f317a" />
+<img width="3424" height="2174" alt="스크린샷 2025-08-06 오후 5 27 07" src="https://github.com/user-attachments/assets/c57a612a-4683-4f6b-8023-d49d86b8a649" />
+<img width="857" height="602" alt="스크린샷 2025-08-06 오후 5 27 44" src="https://github.com/user-attachments/assets/e82e8d2d-267c-444a-a545-8fd6bb934be8" />
 
-### 2. 댓글 작성 (POST `/api/posts/comments`)
-- **요청 방식**: `POST`
-- **요청 Body**: `CommentRequestDto`
-```kotlin
-data class CommentRequestDto(
-    val postId: Long,
-    val content: String
-)
-```
+유효한 인증코드에 대해 비밀번호가 잘 바뀐다.
 
-<img width="3424" height="2174" alt="스크린샷 2025-07-21 오후 2 26 59" src="https://github.com/user-attachments/assets/48327dc6-1980-40c7-80e6-70c29f0a085d" />
+
+---
+
 
 
 ## 📌 참고 링크
 
-- [1:N 관계 구축하기](https://velog.io/@qazws78941/Spring-Boot1N-%EA%B4%80%EA%B3%84-%EA%B5%AC%EC%B6%95%ED%95%98%EA%B8%B0)
-- [1:N 관계에서의 N+1 문제 해결](https://velog.io/@qazws78941/Spring-Boot1N-%EA%B4%80%EA%B3%84%EC%97%90%EC%84%9C%EC%9D%98-N1-%EB%AC%B8%EC%A0%9C-%ED%95%B4%EA%B2%B0)
-- [Spring Data JPA 공식 문서](https://spring.io/projects/spring-data-jpa)
-
-
+- [인증 및 인가 (Spring Security, JWT)](https://velog.io/@stdiodh/Spring-Boot-%EC%9D%B8%EC%A6%9D-%EB%B0%8F-%EC%9D%B8%EA%B0%80-Spring-Security-JWT)
+- [Redis 공식 문서](https://redis.io/)
+- [Spring Mail 공식 문서](https://docs.spring.io/spring-framework/reference/integration/email.html)
+- [Thymeleaf 공식 문서](https://www.thymeleaf.org/)
