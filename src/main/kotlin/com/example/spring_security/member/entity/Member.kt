@@ -19,7 +19,7 @@ class Member (
     val email : String,
 
     @Column(nullable = false, length = 100)
-    val password : String,
+    var password : String,
 
     @Column(nullable = false, length = 20)
     val name : String,

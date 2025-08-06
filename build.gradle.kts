@@ -43,6 +43,10 @@ dependencies {
 
 	//redis
 	implementation("org.springframework.boot:spring-boot-starter-data-redis:3.3.1")
+
+	//smtp
+	implementation("org.springframework.boot:spring-boot-starter-mail")
+	implementation("org.springframework.boot:spring-boot-starter-thymeleaf:3.5.4")
 }
 
 kotlin {

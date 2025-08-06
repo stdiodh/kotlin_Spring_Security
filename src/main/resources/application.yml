@@ -4,6 +4,10 @@ spring:
   application:
     name: Spring_Security
 
+  config:
+    import: optional:file:.env[.properties]
+
+
   data:
     redis:
       host: localhost
@@ -13,9 +17,22 @@ spring:
 #grant all privileges on DBNAME.* to userID@'%';
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/example?autoReconnect=true&useUnicode=true&serverTimezone=Asia/Seoul
-    username: dh
-    password: dh
+    url: jdbc:mysql://${DB_URL}:${DB_PORT}/${DB_NAME}?autoReconnect=true&useUnicode=true&serverTimezone=Asia/Seoul
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  mail:
+    protocol: smtp
+    port: 587
+    username: ${GOOGLE_ID}
+    password: ${APP_PASSWORD}
+    host: smtp.gmail.com
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
   jpa:
     database: mysql
@@ -25,4 +42,4 @@ spring:
     show-sql: true
 
 jwt:
-  secret : ThisisTestThisisTestThisisTestThisisTestThisisTestThisisTest
+  secret : ${JWT_SECRET}

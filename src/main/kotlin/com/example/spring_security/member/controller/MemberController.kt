@@ -6,6 +6,7 @@ import com.example.spring_security.common.dto.TokenInfo
 import com.example.spring_security.member.dto.LoginDto
 import com.example.spring_security.member.dto.MemberRequestDto
 import com.example.spring_security.member.dto.MemberResponseDto
+import com.example.spring_security.member.dto.PasswordResetRequestDto
 import com.example.spring_security.member.service.MemberService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -14,12 +15,8 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+
 @Tag(name = "회원가입 Api 컨트롤러", description = "회원가입과 로그인 API 명세서 입니다.")
 
 @RestController
@@ -74,6 +71,32 @@ class MemberController (
     private fun logout() : ResponseEntity<BaseResponse<String>> {
         val memberId = (SecurityContextHolder.getContext().authentication.principal as CustomUser).id
         val result = memberService.logout(memberId)
+        return ResponseEntity.status(HttpStatus.OK).body(
+            BaseResponse(data = result)
+        )
+    }
+
+    @Operation(
+        summary = "사용자 비밀번호 재설정 코드전송",
+        description = "이메일이 유효하다면 사용자 비밀번호 변경 메일을 보냅니다."
+    )
+    @PostMapping("/reset-password-code")
+    private fun sendEmailResetCode(@Valid @RequestParam email: String)
+            : ResponseEntity<BaseResponse<String>> {
+        val result = memberService.sendPasswordResetCode(email)
+        return ResponseEntity.status(HttpStatus.OK).body(
+            BaseResponse(data = result)
+        )
+    }
+
+    @Operation(
+        summary = "사용자 비밀번호 재설정",
+        description = "전송한 코드를 체크하고 비밀번호를 변경한다."
+    )
+    @PostMapping("/reset-password/request")
+    private fun resetPassword(@Valid @RequestBody passwordResetRequestDto: PasswordResetRequestDto)
+            : ResponseEntity<BaseResponse<String>> {
+        val result = memberService.handlePasswordReset(passwordResetRequestDto)
         return ResponseEntity.status(HttpStatus.OK).body(
             BaseResponse(data = result)
         )
