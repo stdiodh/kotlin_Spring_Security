@@ -42,6 +42,7 @@ class SecurityConfig(
             .authorizeHttpRequests{
                 it.requestMatchers("/api/member/join", "/api/member/login",
                     "/api/member/reset-password-code", "/api/member/reset-password/request").anonymous()
+                    .requestMatchers("/api/aws/s3/**").permitAll()
                     .requestMatchers("/api/**").hasRole("MEMBER")
                     .anyRequest().permitAll()
             }

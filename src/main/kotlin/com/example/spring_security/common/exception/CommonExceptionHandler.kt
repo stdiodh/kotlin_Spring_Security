@@ -1,7 +1,9 @@
 package com.example.spring_security.common.exception
 
+import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.example.spring_security.common.dto.BaseResponse
 import com.example.spring_security.common.enum.ResultStatus
+import org.slf4j.LoggerFactory
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -15,6 +17,8 @@ import org.springframework.web.servlet.NoHandlerFoundException
 @Order(value = 2)
 @RestControllerAdvice
 class CommonExceptionHandler {
+    private val logger = LoggerFactory.getLogger(CommonExceptionHandler::class.java)
+
     //특정 컨트롤러에서(MethodArgumentNotValidException)만 발생하는 예외
     @ExceptionHandler(MethodArgumentNotValidException::class)
     protected fun methodArgumentNotValidExceptionHandler(
@@ -44,10 +48,24 @@ class CommonExceptionHandler {
     }
 
     @ExceptionHandler(Exception::class)
-    protected fun defaultExceptionHandler(exception: Exception) :
+    protected fun defaultExceptionHandler(exception: Exception):
             ResponseEntity<BaseResponse<Any>> {
+        logger.error("알 수 없는 에러 발생", exception)
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
             BaseResponse(status = ResultStatus.ERROR.name, resultMsg = ResultStatus.ERROR.msg)
+        )
+    }
+
+    @ExceptionHandler(AmazonS3Exception::class)
+    protected fun amazonS3ExceptionHandler(exception: AmazonS3Exception):
+            ResponseEntity<BaseResponse<String>> {
+        logger.error("AWS S3 처리 중 예외 발생", exception)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+            BaseResponse(
+                status = ResultStatus.ERROR.name,
+                data = null,
+                resultMsg = exception.message ?: "AWS S3 처리 중 에러가 발생했습니다."
+            )
         )
     }
 }
