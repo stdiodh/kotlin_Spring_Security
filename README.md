@@ -1,168 +1,285 @@
-# 🗂️ 5주차 - RefreshToken, SMTP
-> 로그인 토큰 중 RefreshToken을 생성해보고, 비밀번호를 잊어버렸을 시 메일로 인증번호가 전송되어 비밀번호를 재설정할 수 있는 로직을 만들어보자!
-
-본 문서는 Spring Boot를 활용하여 **인증 토큰 관리(Access/Refresh Token)** 와 **이메일 전송 기능(SMTP)** 을 구현하는 방법을 설명합니다.  
-캐시 저장소로는 `Redis`, 이메일 템플릿 처리는 `Thymeleaf`를 사용합니다.
+# 🗂️ 6주차 - Test & TDD
+> 프로젝트에서 테스트 코드를 작성하여 기능을 안정적으로 검증하고,  
+> TDD(Test-Driven Development)를 통해 오류를 최소화하는 방법을 학습합니다.
 
 ---
 
-## 이론 설명
+## 📖 이론 설명
 
-### ✅ Access Token이란?
-- 로그인 후 인증된 사용자임을 증명하는 **짧은 수명의 토큰**
-- 사용자가 서버에 리소스를 요청할 때 **인증 정보로 사용**
-- 민감한 정보를 담고 있어 유효 시간이 짧게 설정되는 것이 일반적
-
----
-
-### 🔒 Access Token의 한계
-- **짧은 유효 시간**으로 인해 자주 재로그인이 필요
-- 일정 시간 경과 후 **403 오류 발생**
-- 사용자 경험 저하
+### ✅ 테스트 필요성
+- 기존 방식: 코드를 작성하고 직접 실행하여 동작 확인
+- 문제점:
+  - 프로젝트 규모가 커질수록 테스트 과정이 복잡해짐
+  - 개발자가 모든 데이터를 직접 입력해야 함
+- 해결책:
+  - **테스트 코드 작성**으로 실행 없이 기능 검증 가능
+  - 예외 상황과 정상 동작을 빠르게 확인 가능
+  - 대규모 애플리케이션에서도 손쉽게 기능 작동 확인
 
 ---
 
-### 🔁 Refresh Token이란?
-- Access Token의 단점을 보완하기 위해 도입된 **장기 토큰**
-- 사용자가 로그인 상태를 유지할 수 있도록 **Access Token을 갱신하는 용도**
-- Refresh Token은 서버에 안전하게 저장되어야 하며, **로그아웃 시 제거 필요**
-
----
-
-## 🧰 Redis 도입 이유
-
-| 항목 | 설명 |
+### 🔍 테스트 종류
+| 종류 | 설명 |
 |------|------|
-| RDB (MySQL) | 데이터가 많아질수록 탐색 시간이 증가함 |
-| Redis | 메모리 기반 캐시 시스템, 빠른 조회 가능 |
-| 특징 | NoSQL 구조로 설정이 간단하며, Token 저장에 적합 |
+| **단위(Unit) 테스트** | 특정 모듈/계층의 기능을 개별적으로 검증 |
+| **컨트롤러(Controller) 테스트** | API 요청/응답 형식, HTTP Status, 데이터 구조를 검증 |
 
-### 🖥 Redis 설치 명령어
+---
 
-#### ▸ MacOS
-```bash
-brew install redis
-brew services start redis
-redis-cli -h localhost -p 6379
+### 📚 테스트 용어
+- **테스트 시나리오**: 무엇을, 어떻게 테스트할지 작성 (Given-When-Then 구조)
+- **테스트 케이스**: 테스트해야 할 모든 경우의 수
+- **테스트 스텁**: 실제 하위 모듈 대신 동작하는 가짜 모듈
+
+---
+
+## 🧰 Spring Boot 테스트 환경
+
+### 사용 라이브러리
+- `JUnit5`
+- `Mockito` / `mockk` (가짜 객체 생성)
+- `Spring Boot Test Starter`
+
+### 단위 테스트 예시 (Service)
+- 게시글 전체 조회 → 모든 데이터 반환
+- 게시글 상세 조회 → ID로 특정 게시글 조회
+- 게시글 상세 조회 실패 → 잘못된 ID 시 예외 발생
+- 게시글 생성 → 생성된 데이터 반환
+
+### 컨트롤러 테스트 예시
+- `MockMvc` 사용해 HTTP 요청 시뮬레이션
+- `JsonPath`로 응답 데이터 검증
+- **성공 시**:
+  - 상태 코드: 200 또는 201
+  - `status` = SUCCESS
+  - `resultMsg` = "요청이 성공했습니다!"
+- **실패 시**:
+  - 상태 코드: 400
+  - `status` = ERROR
+  - Validation 메시지 포함
+
+---
+
+## 🔄 TDD (Test-Driven Development)
+- **정의**: 테스트 코드를 먼저 작성하고, 이후 기능 구현
+- **장점**:
+  - 오류 최소화
+  - 코드 품질 향상
+- **단점**:
+  - 개발 시간 증가
+  - 테스트 작성 지식 필요
+
+---
+
+## 📊 TDD 사이클 (Red → Green → Refactor)
+```mermaid
+flowchart LR
+    A[Red: 실패하는 테스트 작성] --> B[Green: 기능 구현하여 테스트 통과]
+    B --> C[Refactor: 코드 개선 및 리팩토링]
+    C --> A
 ```
 
-#### ▸ Windows
-- [`Redis for Windows`](https://github.com/microsoftarchive/redis/releases) 에서 `.msi` 파일 설치
-- 설치 경로에서 `redis-cli.exe` 실행
+---
+
+## 📌 실습
+
+# 🗂️ Controller 테스트 시나리오 요약
+
+Spring Boot `PostController`와 `CommentController`의 단위 테스트 함수별 시나리오를 정리한 자료입니다.  
+MockMvc + Mockito를 활용하여 컨트롤러 단위에서 요청/응답과 상태 코드를 검증합니다.
 
 ---
 
-## 🔓 로그아웃 구현
+## 1️⃣ PostControllerTest 함수별 요약
 
-- 로그아웃 시 Redis에 저장된 **Refresh Token 제거 필수**
-- 제거하지 않으면 발생할 수 있는 문제:
-  1. 공격자가 Redis에서 모든 토큰을 탈취할 수 있음
-  2. 사용자가 많을수록 **리소스 낭비** 심화
-  3. 세션이 **무한 유지**될 수 있음 (분실/탈퇴 시 위험)
-
----
-
-## 📧 이메일 전송 (SMTP)
-
-### ✅ SMTP란?
-- 메일 전송 프로토콜 (Simple Mail Transfer Protocol)
-- Spring Boot에서 **메일 발송 기능을 구현**할 수 있음
-- 비밀번호 재설정, 인증번호 발송 등에 활용 가능
+| 테스트 함수 | 설명 | 검증 포인트 | 상태 코드 |
+|------------|------|-------------|-----------|
+| 게시글 전체 조회 성공 | 전체 게시글 조회 | 배열 길이, 각 게시글 필드 값 | 200 OK |
+| 게시글 전체 조회 - 빈 목록 | 게시글 없음 | 배열 길이 0 | 200 OK |
+| 게시글 ID로 조회 성공 | 특정 게시글 조회 | BaseResponse 구조, 댓글 포함 | 200 OK |
+| 게시글 작성 성공 | 게시글 작성 | 작성된 게시글 값, 댓글 배열 | 201 CREATED |
+| 게시글 작성 실패 - 제목 누락 | 제목이 빈 문자열 | 유효성 검증 실패 | 400 Bad Request |
+| 게시글 작성 실패 - 내용 누락 | 내용이 빈 문자열 | 유효성 검증 실패 | 400 Bad Request |
+| 게시글 수정 성공 | 게시글 수정 | 수정된 제목/내용, 공개 여부 | 200 OK |
+| 게시글 삭제 성공 | 게시글 삭제 | 삭제 메시지 반환 | 200 OK |
+| 게시글 조회 실패 - 존재하지 않는 게시글 | 없는 게시글 조회 | 예외 발생 | 400 Bad Request |
 
 ---
 
-### ✅ Thymeleaf란?
-- **HTML 템플릿 엔진**으로 변수 바인딩 가능
-- 이메일 본문을 동적으로 생성할 수 있도록 도와줌
+## 2️⃣ CommentControllerTest 시나리오 요약
 
-```html
-<p>안녕하세요 <span th:text="${username}"></span> 님!</p>
-```
+| 시나리오 | 설명 | 검증 포인트 | 상태 코드 |
+|----------|------|-------------|-----------|
+| 댓글 전체 조회 성공 | 댓글 목록 3개 반환 | 배열 길이, 댓글 내용 | 200 OK |
+| 댓글 전체 조회 - 빈 목록 | 댓글 없음 | 배열 길이 0 | 200 OK |
+| 댓글 작성 성공 | 정상 댓글 작성 | 작성된 댓글 내용, 게시글 반환 | 200 OK |
+| 댓글 작성 실패 (없는 게시글) | 존재하지 않는 게시글에 작성 | 예외 처리 | 400 Bad Request |
+| 댓글 작성 - 빈 내용 | 내용이 빈 문자열 | 허용, 댓글 반환 | 200 OK |
+| 댓글 작성 - 긴 내용(1000자) | 긴 내용 작성 | 내용 일치 | 200 OK |
+| 잘못된 JSON 요청 | JSON 구조 오류 | 예외 처리 | 400 Bad Request |
 
 ---
 
-## 📌 실습 환경
+## 3️⃣ 테스트 시나리오 요약
 
-- **Swagger UI 주소**  
-  http://localhost:8080/swagger-ui/index.html#/
+1. **조회 관련**
+   - 게시글/댓글 전체 조회
+   - 특정 게시글 조회 + 댓글 포함
+   - 데이터 유무에 따른 배열 길이 검증
 
-- **실습 도구**  
-  POSTMAN → Swagger로 대체 (API 명세 제공의 한계 때문)
+2. **작성/수정 관련**
+   - 게시글/댓글 정상 작성
+   - 제목/내용 유효성 체크
+   - 긴 내용, 빈 내용 허용 여부
 
-<img width="1822" height="1180" alt="스크린샷 2025-07-14 오후 3 42 22" src="https://github.com/user-attachments/assets/5eec3917-3eb6-44e4-8b00-f9516e68f674" />
+3. **삭제 관련**
+   - 게시글 삭제 메시지 확인
 
-### 1. 리프레시 토큰 발급 (POST /api/member/login)
-- **요청 방식**: `POST`
-- **요청 Body**: `LoginRequestDto`
+4. **예외/오류 케이스**
+   - 존재하지 않는 게시글 조회/댓글 작성
+   - 잘못된 JSON 요청 처리
+
+5. **검증 포인트**
+   - 상태 코드 (`200/201/400`)
+   - JSON 구조 및 필드 값
+   - 서비스 호출 여부 (`verify`)
+---
+
+# 🗂️ Post & Comment Service 테스트 시나리오
+
+Spring Boot `PostService`와 `CommentService` 단위 테스트를 정리한 자료입니다.  
+마찬가지로 Mockito를 활용하여 Repository를 Mock하고, 서비스 로직과 결과 검증에 집중합니다.
+
+---
+
+## 1️⃣ PostServiceTest 함수별 요약
+
+| 테스트 함수 | 설명 | 검증 포인트 | 상태 코드 / 결과 |
+|------------|------|-------------|----------------|
+| 게시글 ID로 조회 성공 | 존재하는 게시글 조회 | id, title, post, userId, public | 정상 게시글 반환 |
+| 게시글 ID로 조회 실패 | 존재하지 않는 게시글 조회 | 예외 발생 | `ResponseStatusException (404)` |
+| 게시글 작성 성공 | 새 게시글 저장 | 작성된 게시글 필드 검증 | 정상 저장 |
+| 게시글 수정 성공 | 기존 게시글 수정 | title, post, public 변경 확인 | 정상 수정 |
+| 게시글 수정 실패 - 존재하지 않는 게시글 | 없는 게시글 수정 | 예외 발생 | `PostException` |
+| 게시글 삭제 성공 | 게시글 삭제 | deleteById 호출 여부 | 정상 삭제 |
+| 빈 제목으로 게시글 작성 | 제목 빈 문자열 | Service 레벨에서는 저장 | Controller에서 검증 필요 |
+| 잘못된 사용자 ID로 게시글 작성 | userId 0 | Service 레벨 저장 | Controller에서 검증 필요 |
+
+---
+
+## 2️⃣ CommentServiceTest 함수별 요약
+
+| 테스트 함수 | 설명 | 검증 포인트 | 상태 코드 / 결과 |
+|------------|------|-------------|----------------|
+| 댓글 목록 조회 성공 | 전체 댓글 조회 | 댓글 개수, 내용 | 정상 리스트 반환 |
+| 댓글 목록 조회 - 빈 목록 | 댓글 없음 | 리스트 비어 있음 | 빈 리스트 |
+| 댓글 작성 성공 | 정상 게시글에 댓글 작성 | 댓글 포함 게시글 반환 | 정상 |
+| 댓글 작성 실패 - 존재하지 않는 게시글 | 없는 게시글에 댓글 작성 | 예외 발생 | `IllegalArgumentException` |
+| 댓글 작성 - 여러 댓글이 있는 게시글 | 기존 댓글 + 새 댓글 | 총 댓글 수 | 정상 |
+| 댓글 작성 - 빈 내용 | 빈 문자열 작성 가능 | 댓글 포함 게시글 반환 | 정상 |
+
+---
+
+## 3️⃣ 테스트 시나리오 요약
+
+1. **조회 관련**
+   - 게시글/댓글 조회
+   - 존재 여부에 따라 리스트 반환 또는 예외 처리
+
+2. **작성/수정 관련**
+   - 게시글/댓글 정상 작성
+   - 게시글 존재 여부 체크 후 작성
+   - 여러 댓글, 빈 내용 작성 가능
+   - 빈 제목, 잘못된 userId는 Service에서는 통과 (Controller에서 검증 필요)
+
+3. **삭제 관련**
+   - 게시글 삭제
+   - Repository deleteById 호출 검증
+
+4. **예외/오류 케이스**
+   - 존재하지 않는 게시글 조회/수정/댓글 작성
+   - ResponseStatusException, PostException 처리
+
+5. **검증 포인트**
+   - 필드 값 검증 (`id`, `title`, `post`, `userId`, `public`, 댓글 내용)
+   - Repository 호출 여부 (`verify`)
+   - Service 반환값 구조 확인 (`PostResponseDto`, `CommentResponseDto`)
+
+---
+
+## 4️⃣ 핵심 서비스 로직 예제
+
 ```kotlin
-data class LoginDto (
-    @field:NotBlank(message = "이메일을 입력하세요.")
-    @field:Email(message = "이메일 형식이 올바르지 않습니다!")
-    @JsonProperty("email")
-    private val _email : String?,
+class PostService(
+    private val postRepository: PostRepository
+) {
+    fun getPostById(id: Long): PostResponseDto {
+        val post = postRepository.findById(id)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "게시글 없음") }
+        return post.toResponse()
+    }
 
-    @field:NotBlank(message = "비밀번호를 입력하세요.")
-    @JsonProperty("password")
-    private val _password : String?
-)
+    fun postPost(request: PostRequestDto): PostResponseDto {
+        val saved = postRepository.save(request.toEntity())
+        return saved.toResponse()
+    }
+
+    fun putPost(id: Long, request: PostRequestDto): PostResponseDto {
+        val post = postRepository.findById(id)
+            .orElseThrow { PostException("존재하지 않는 게시글 ID 입니다.") }
+        val updated = post.apply {
+            title = request.title
+            post = request.post
+            public = request.public
+        }
+        return postRepository.save(updated).toResponse()
+    }
+
+    fun deletePostById(id: Long) {
+        postRepository.deleteById(id)
+    }
+}
+
+class CommentService(
+    private val commentRepository: CommentRepository,
+    private val postRepository: PostRepository
+) {
+    fun getComments(): List<Comment> = commentRepository.findAll()
+
+    fun createComment(request: CommentRequestDto): PostResponseDto {
+        val post = postRepository.findById(request.postId)
+            .orElseThrow { IllegalArgumentException("게시글을 찾을 수 없습니다.") }
+
+        commentRepository.save(Comment(content = request.content, post = post))
+        val comments = commentRepository.findAllByPost(post)
+        return PostResponseDto(
+            id = post.id,
+            title = post.title,
+            post = post.post,
+            userId = post.userId,
+            public = post.public,
+            comments = comments.map { CommentResponseDto(it.id, it.content) }
+        )
+    }
+}
 ```
-- **DTO Validation 적용됨**
-<img width="857" height="602" alt="image" src="https://github.com/user-attachments/assets/ae1e15f0-a1da-48ea-af10-e6cab4c6d768" />
 
-로그아웃을 하지 않으면 RefreshToken이 남아 있을 수 있으니 null로 표기 시 redis에 들어가 `flashall` 명령어를 사용할 것
+**핵심**은 서비스 로직은 Mock으로 대체하고, 컨트롤러 동작과 응답 구조/상태 코드 검증에 집중
 
-<img width="3424" height="2174" alt="image" src="https://github.com/user-attachments/assets/384df843-068e-4204-a228-e65901315757" />
+## 커버리지 확인방법
+<img width="856" height="554" alt="스크린샷 2025-08-15 오전 9 24 14" src="https://github.com/user-attachments/assets/3670c707-2dd8-4501-82ac-6b03980413ca" />
+
+- [test] - [그 외 실행/디버그] - [커버리지로 "..." 실행]
 
 
-### 2. 비밀번호 재설정 코드 전송 (POST /api/member/reset-password-code)
-- **요청 방식**: `POST`
-- **요청 Param**: `email`
+<img width="421" height="129" alt="image" src="https://github.com/user-attachments/assets/19382f27-ecc5-4526-859c-ba78b6fab100" />
 
-<img width="3424" height="2174" alt="image" src="https://github.com/user-attachments/assets/75b05f3b-50fb-4e34-9dfc-fa6d11568ea8" />
-<img width="3424" height="2174" alt="image" src="https://github.com/user-attachments/assets/344ff534-59fb-434c-a151-945675b3bc14" />
-유효한 이메일에만 전송되니 유의할 것
-
-### 3. 비밀번호 재설정 코드 확인 후 비밀번호 재설정 (POST /api/member/reset-password/request)
-- **요청 방식**: `POST`
-- **요청 Body**: `PasswordResetRequestDto`
-```kotlin
-data class PasswordResetRequestDto(
-    @Order(1)
-    @field:Email(message = "올바르지 않은 이메일 형식입니다.")
-    @field:NotBlank(message = "이메일은 필수 입력 항목입니다.")
-    @JsonProperty("email")
-    private val _email: String,
-
-    @Order(2)
-    @field:NotBlank(message = "인증 코드는 필수 입력 항목입니다.")
-    @JsonProperty("code")
-    private val _code: String,
-
-    @Order(3)
-    @field:NotBlank(message = "비밀번호는 필수 입력 항목입니다.")
-    @field:Pattern(
-        regexp = "^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#\$%^&*()])[a-zA-Z0-9!@#\$%^&*()]{8,20}\$",
-        message = "올바르지 못한 비밀번호 형식입니다!"
-    )
-    @JsonProperty("newPassword")
-    private val _newPassword: String
-)
-```
-- **DTO Validation 적용됨**
-
-<img width="3424" height="2174" alt="스크린샷 2025-08-06 오후 5 27 07" src="https://github.com/user-attachments/assets/c57a612a-4683-4f6b-8023-d49d86b8a649" />
-<img width="857" height="602" alt="스크린샷 2025-08-06 오후 5 27 44" src="https://github.com/user-attachments/assets/e82e8d2d-267c-444a-a545-8fd6bb934be8" />
-
-유효한 인증코드에 대해 비밀번호가 잘 바뀐다.
-
+- 테스트 커버리지가 100퍼센트가 되도록 노력해봅시다:)
 
 ---
-
-
 
 ## 📌 참고 링크
 
-- [인증 및 인가 (Spring Security, JWT)](https://velog.io/@stdiodh/Spring-Boot-%EC%9D%B8%EC%A6%9D-%EB%B0%8F-%EC%9D%B8%EA%B0%80-Spring-Security-JWT)
-- [Redis 공식 문서](https://redis.io/)
-- [Spring Mail 공식 문서](https://docs.spring.io/spring-framework/reference/integration/email.html)
-- [Thymeleaf 공식 문서](https://www.thymeleaf.org/)
+- [mockk 공식 문서](https://mockk.io/)
+- [kotest 공식 문서](https://kotest.io/docs/assertions/matchers)
+- [TDD 정리 velog](https://velog.io/@stdiodh/Spring-Boot-TDD)
