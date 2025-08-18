@@ -52,7 +52,6 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-thymeleaf:3.5.4")
 
 	//s3
-	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("com.amazonaws:aws-java-sdk-s3:1.12.788") // AWS S3 SDK
 }
 
