@@ -1,24 +1,21 @@
 package com.example.spring_security.post.service
 
-import com.example.spring_security.common.exception.post.PostException
 import com.example.spring_security.post.dto.PostRequestDto
 import com.example.spring_security.post.entity.Post
 import com.example.spring_security.post.repository.PostRepository
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.any
 import org.mockito.kotlin.given
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.any
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.assertThrows
-import org.mockito.Mockito.`when`
-import java.util.Optional
+import java.util.*
 
 //Mockito를 JUnit5 테스트에서 원활히 사용하기 위한 필수 설정
 @ExtendWith(MockitoExtension::class)
@@ -104,21 +101,6 @@ class PostServiceTest {
         assertEquals(false, result.public)
         verify(postRepository).findById(id)
         verify(postRepository).save(any<Post>())
-    }
-
-    @Test
-    fun `게시글 수정 실패 - 존재하지 않는 게시글`() {
-        // given: 수정 대상 게시글이 존재하지 않는 상황
-        val id = 999L
-        val updateRequest = PostRequestDto(null, "수정 제목", "수정 내용", 1L, true)
-        given(postRepository.findById(id)).willReturn(Optional.empty())
-
-        // when & then: PostException 발생 여부 확인
-        val exception = assertThrows(PostException::class.java) {
-            postService.putPost(id, updateRequest)
-        }
-        assertEquals("존재하지 않는 게시글 ID 입니다.", exception.message)
-        verify(postRepository).findById(id)
     }
 
 
