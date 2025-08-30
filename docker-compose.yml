@@ -15,6 +15,19 @@ services:
     ports:
       - "3306:3306" # 외부에서 DB에 직접 접속할 때 사용 (개발용)
 
+  # REDIS 서비스 정의
+  redis:
+    image: redis:7-alpine # redis-alpine 이미지
+    container_name: example-redis-container
+    command: redis-server --appendonly yes # AOF(Append Only File) 활성화로 데이터 영속성 보장
+    volumes:
+      - redis_data:/data
+    networks:
+      - example_net
+    ports: # 외부에서 Redis에 직접 접속할 필요가 있을 때 사용 (예: 디버깅용)
+      - "6379:6379"
+
+
   # Spring Boot 서비스 정의
   app:
     image: ${IMAGE_NAME}  # 빌드된 Spring Boot Docker 이미지
@@ -24,6 +37,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+
+
     depends_on:
       - mysql # mysql 서비스가 준비된 후에 실행되도록 설정
     networks:
@@ -35,6 +53,7 @@ services:
 
 volumes:
   mysql_data: # 볼륨 이름 변경
+  redis_data:
 
 networks:
   example_net:

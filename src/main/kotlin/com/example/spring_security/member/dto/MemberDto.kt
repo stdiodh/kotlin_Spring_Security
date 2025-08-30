@@ -17,7 +17,7 @@ data class MemberRequestDto (
     private val _email : String?,
 
     @field:NotBlank(message = "비밀번호를 입력하세요!")
-    @field:Pattern(regexp ="^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#\$%^&*()])[a-zA-Z0-9!@#\$%^&*()]{8,20}\$",
+    @field:Pattern(regexp ="^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#\$%^&*()])[a-zA-Z0-9!@#\$%^&*()]{8,16}\$",
         message = "올바르지 못한 비밀번호 형식입니다!")
     @JsonProperty("password")
     private val _password : String?,

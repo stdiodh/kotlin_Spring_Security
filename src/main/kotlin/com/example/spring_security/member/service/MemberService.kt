@@ -19,7 +19,6 @@ import com.example.spring_security.member.repository.PasswordResetCodeRepository
 import com.example.spring_security.member.repository.RefreshTokenRepository
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
-import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
