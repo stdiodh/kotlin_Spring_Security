@@ -1,83 +1,66 @@
-# 8~9주차 통합 - 🚀 EC2 & Docker 기반 배포 자동화 (CI/CD) 정리
+# Kotlin Spring Security Lab
+> **한 줄 소개**: 인증/인가, 게시판, 파일 업로드를 통합한 Kotlin + Spring Boot 백엔드 학습 프로젝트
 
-### 1. 왜 내 PC로 서버를 운영하면 안될까?
-로컬에서 완벽하게 동작하던 API 서버도, 실제 서비스로 공개하기 위해 개인 PC를 서버로 사용하면 여러 문제에 직면하게 됩니다.
+## 1. 프로젝트 개요 (Overview)
+- **개발 기간**: 2025년 학습 기간
+- **개발 인원**: 개인 프로젝트
+- **프로젝트 목적**: Spring Security/JWT 기반 인증 구조와 실무형 부가 기능(S3, 메일, Redis)을 통합 학습
+- **Repository**: /Users/dh/Desktop/Code/simple-spring-boot/kotlin_Spring_Security
 
-- **유동 IP:** IP 주소가 계속 바뀌어 도메인 연결이 끊어질 수 있습니다.
-- **안정성:** 24시간 365일 PC를 켜둘 수 없으며, 정전이나 인터넷 끊김 등 위험이 많습니다.
-- **보안:** 해킹 시도의 표적이 되기 쉽고, 중요한 정보가 유출될 수 있습니다.
-- **성능 및 확장성:** 사용자가 몰리면 서버가 다운되고, 유연한 성능 업그레이드가 어렵습니다.
+## 2. 사용 기술 및 선정 이유 (Tech Stack & Decision)
 
----
+| Category | Tech Stack | Version | Decision Reason (Why?) |
+| --- | --- | --- | --- |
+| **Language** | Kotlin | 1.9.25 | 도메인/서비스 계층 구현 시 가독성과 null 안전성 확보 |
+| **Framework** | Spring Boot + Spring Security + JPA | Boot 3.2.5 | 인증/인가와 데이터 접근 계층을 표준 방식으로 구성하기 위함 |
+| **Database** | MySQL | 8.x | 회원/게시글/댓글의 관계형 트랜잭션 처리 목적 |
+| **Cache** | Redis | - | 인증 보조 데이터 및 단기 상태 관리 |
+| **Infra** | AWS S3, SMTP | - | 파일 업로드와 이메일 인증/알림 시나리오를 포함하기 위함 |
 
-### 2. 해결책 (1): 클라우드 서버 (AWS EC2)
-> AWS에서 제공하는 원격 제어 가능 **가상 서버 대여 서비스**입니다.
+## 3. 시스템 아키텍처 (System Architecture)
+```mermaid
+graph TD
+  Client --> API[Spring Boot API]
+  API --> Auth[JWT Security]
+  API --> MySQL[(MySQL)]
+  API --> Redis[(Redis)]
+  API --> S3[(AWS S3)]
+  API --> Mail[SMTP]
+```
 
-거대한 데이터 센터의 컴퓨터 자원을 잘게 쪼개어 나만의 서버(인스턴스)를 빌려 쓰는 개념으로, 앞선 4가지 문제점을 모두 해결할 수 있습니다.
-- **프리티어:** 신규 가입 시 1년간 `t2.micro` 사양의 서버를 월 750시간 무료로 사용할 수 있어, 24시간 운영해도 과금되지 않습니다.
+- **설계 특징**:
+- `member` / `post` / `common` / `aws` 패키지 분리
+- JWT 필터와 토큰 프로바이더를 분리해 인증 책임 모듈화
+- 예외 핸들러를 도메인/공통으로 분리해 응답 표준화
 
----
+## 4. 핵심 기능 (Key Features)
+- **회원 인증**: JWT 기반 로그인/인가 처리
+- **게시판 기능**: 게시글/댓글 CRUD 및 검증 로직
+- **파일 업로드**: S3 연동 파일 저장 API 제공
+- **운영 보조**: 메일 발송, Swagger 문서화, 테스트 코드 구성
 
-### 3. 새로운 문제: "제 컴퓨터에선 잘 됐는데요?"
-서버를 준비해도, 내 PC와 서버의 환경(Java 버전, 라이브러리 등)이 달라 배포 시 각종 오류가 발생할 수 있습니다. <br>이러한 **"환경 불일치"** 문제는 배포 실패의 주된 원인입니다.
+## 5. 트러블 슈팅 및 성능 개선 (Troubleshooting & Refactoring)
+### 5-1. 인증 로직 결합도 완화
+- **문제(Problem)**: 컨트롤러/서비스에 인증 파싱이 섞이면 변경 시 파급 범위 확대
+- **원인(Cause)**: 토큰 해석과 비즈니스 로직이 동일 계층에 섞일 때 테스트/변경 비용 증가
+- **해결(Solution)**:
+  1. JWT 생성/검증을 `JwtTokenProvider`로 통합
+  2. 요청 인증은 `JwtAuthenticationFilter`에서 선처리
+- **검증(Verification)**: 인증 정책 변경 시 필터/프로바이더 수정만으로 동작하는지 회귀 테스트
+- **결과(Result)**: 인증 변경 시 수정 지점 축소, 기능 코드와 보안 코드의 관심사 분리 개선
 
----
+### 5-2. 파일 업로드 기능 통합 시 안정성 확보
+- **문제(Problem)**: 파일 API를 도입하면 예외 처리와 권한 검증 누락 위험 존재
+- **원인(Cause)**: 멀티파트 처리와 저장소 연동 실패 케이스가 일반 API보다 다양함
+- **해결(Solution)**:
+  1. `S3Service`/`S3Controller` 분리로 업로드 책임 명확화
+  2. 공통 예외 처리 계층에서 실패 응답 규격 통일
+- **검증(Verification)**: 파일 형식/용량/권한 오류별 응답 코드 및 메시지 일관성 확인
+- **결과(Result)**: 업로드 실패 원인 파악이 쉬워지고 API 응답 일관성 향상
 
-### 4. 해결책 (2): 개발 환경 패키징 (Docker)
-<img width="3000" height="3000" alt="image" src="https://github.com/user-attachments/assets/8b9180a2-1288-43a0-8ec6-d7f44ee3b545" />
+## 6. 프로젝트 회고 (Retrospective)
+- **배운 점**: 인증/파일/메일 등 주변 기능을 함께 붙여봐야 실제 서비스 구조 감각이 생김
+- **아쉬운 점 & 향후 계획**: 운영 환경 기준으로 비밀번호 인코딩 정책, 보안 헤더, 모니터링 지표를 추가 강화할 계획
 
-
-> 애플리케이션과 실행에 필요한 모든 환경을 **컨테이너**라는 표준화된 상자에 담아, 어디서든 동일하게 실행시키는 기술입니다.
-
-- **Dockerfile (설계도):** 컨테이너 생성 방법을 정의한 텍스트 파일입니다.
-- **Image (실행 파일):** Dockerfile을 바탕으로 만들어진, 실행에 필요한 모든 것을 포함한 불변의 소프트웨어 패키지입니다.
-- **Container (실행된 상태):** 이미지를 메모리에 올려 실제로 실행한 상태로, 우리가 사용하는 애플리케이션 그 자체입니다.
-
-
-
----
-
-### 5. 마지막 과제: 반복적인 수동 배포
-Docker를 사용해도 코드를 수정할 때마다 아래 과정을 반복하는 것은 비효율적이고 실수할 가능성이 높습니다.
-1.  로컬에서 코드 수정 후 `git push`
-2.  터미널로 EC2 서버에 접속 (SSH)
-3.  Docker 이미지 다시 빌드 (`docker build`)
-4.  기존 컨테이너 중지 (`docker stop`)
-5.  새로운 이미지로 컨테이너 실행 (`docker run`)
-
----
-
-### 6. 해결책 (3): 배포 자동화 (CI/CD)
-> 코드를 Push하는 순간, **빌드-테스트-배포**가 자동으로 이루어지는 파이프라인입니다.
-
-- **CI (Continuous Integration, 지속적 통합):** 여러 개발자의 코드를 주기적으로 통합하고, 자동으로 빌드 및 테스트하여 코드 품질을 유지하는 과정입니다.
-- **CD (Continuous Deployment, 지속적 배포):** CI를 통과한 코드를 실제 운영 서버까지 자동으로 배포하여, 빠르고 안전하게 새로운 기능을 전달하는 과정입니다.
-
----
-
-### 7. GitHub Actions를 활용한 CI/CD 파이프라인 구축
-<img width="2360" height="1326" alt="image" src="https://github.com/user-attachments/assets/d5ea8bb2-0c88-4487-be27-aacfae4d049c" />
-
-> `main` 브랜치에 코드를 `push`하면 GitHub Actions가 아래의 흐름으로 자동 배포를 진행합니다.
-
-
-
-1.  **[GitHub Actions]** 코드 변경을 감지하고 CI/CD 작업 시작.
-2.  **(CI)** 프로젝트 코드 빌드 및 테스트 실행.
-3.  **(CD)** Dockerfile로 Docker 이미지 빌드.
-4.  **(CD)** 생성된 이미지를 Docker Hub(이미지 저장소)에 업로드.
-5.  **(CD)** SSH로 EC2 서버에 원격 접속.
-6.  **(CD)** EC2 서버에서 최신 이미지를 받아와 컨테이너 실행.
-
----
-
-## 📌 실습
-- Spring Boot 프로젝트 생성하여 GitHub Actions를 통해 EC2에 Docker 컨테이너로 자동 배포하는 전체 파이프라인 구축
-- AWS 자격 증명, Docker Hub 계정 정보 등 민감한 정보를 GitHub Secrets에 등록하여 안전하게 관리하기
-
----
-
-## 📌 참고 링크
-- [EC2에 본인의 API 서버 업로드하기 - 이론 (Docker, CI/CD)](https://velog.io/@stdiodh/aws-EC2%EC%97%90-%EB%B3%B8%EC%9D%B8%EC%9D%98-API-%EC%84%9C%EB%B2%84-%EC%97%85%EB%A1%9C%EB%93%9C%ED%95%98%EA%B8%B0-%EC%9D%B4%EB%A1%A0-Docker-CICD)
-- [Github Actions으로 CI/CD 경험하기 (Spring boot, EC2, Docker)](https://jojoldu.tistory.com/539)
-- [AWS EC2에 Docker 사용하여 Spring Boot 배포 자동화하기](https://velog.io/@leyuri/AWS-EC2%EC%97%90-Docker-%EC%82%AC%EC%9A%A9%ED%95%98%EC%97%AC-Spring-Boot-%EB%B0%B0%ED%8F%AC-%EC%9E%90%EB%8F%99%ED%99%94%ED%95%98%EA%B8%B0)
+## 7. API 명세
+- API 요약 문서: `/Users/dh/Desktop/Code/simple-spring-boot/kotlin_Spring_Security/docs/API_SPEC.md`
